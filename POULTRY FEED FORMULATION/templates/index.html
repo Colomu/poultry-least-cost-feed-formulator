@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Least-Cost Feed Formulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        select, button {
+            margin-bottom: 15px;
+            width: 300px;
+        }
+        #results {
+            margin-top: 20px;
+            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Least-Cost Feed Formulation</h1>
+    <form id="formulationForm">
+        <label for="poultry_class">Select Poultry Class:</label>
+        <select id="poultry_class" name="poultry_class">
+            {% for poultry_class in poultry_classes %}
+            <option value="{{ poultry_class }}">{{ poultry_class }}</option>
+            {% endfor %}
+        </select>
+
+        <h3>Select Ingredients:</h3>
+        {% for category, options in ingredient_options.items() %}
+        <label for="{{ category }}">{{ category.replace('_', ' ').title() }}:</label>
+        <select id="{{ category }}" name="{{ category }}" multiple>
+            {% for option in options %}
+            <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+        </select>
+        {% endfor %}
+
+        <button type="button" onclick="submitForm()">Generate Formulations</button>
+    </form>
+
+    <h2>Results</h2>
+    <div id="results"></div>
+
+    <script>
+        async function submitForm() {
+            const form = document.getElementById('formulationForm');
+            const formData = new FormData(form);
+    
+            const data = {
+                poultry_class: formData.get('poultry_class'),
+                energy_sources: Array.from(formData.getAll('energy_sources')),
+                energy_replacers: Array.from(formData.getAll('energy_replacers')),
+                high_protein_sources: Array.from(formData.getAll('high_protein_sources')),
+                medium_protein_sources: Array.from(formData.getAll('medium_protein_sources')),
+                protein_replacers: Array.from(formData.getAll('protein_replacers')),
+                amino_acid_1: Array.from(formData.getAll('amino_acid_1')),
+                amino_acid_2: Array.from(formData.getAll('amino_acid_2'))
+            };
+    
+            try {
+                const response = await fetch('/formulate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+    
+                const results = await response.json();
+                if (results.error) {
+                    document.getElementById('results').innerText = `Error: ${results.error}`;
+                } else {
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = '<h3>Generated Formulations:</h3>';
+                    results.formulations.forEach((formulation, index) => {
+                        resultsDiv.innerHTML += `<h4>Option ${index + 1}</h4><ul>`;
+                        for (const [ingredient, proportion] of Object.entries(formulation)) {
+                            resultsDiv.innerHTML += `<li>${ingredient}: ${proportion}</li>`;
+                        }
+                        resultsDiv.innerHTML += `</ul>`;
+                    });
+    
+                    if (results.recommended_formulations.length > 0) {
+                        resultsDiv.innerHTML += '<h3>Recommended Formulations:</h3>';
+                        results.recommended_formulations.forEach((formulation, index) => {
+                            resultsDiv.innerHTML += `<h4>Recommended Option ${index + 1}</h4><ul>`;
+                            for (const [ingredient, proportion] of Object.entries(formulation)) {
+                                resultsDiv.innerHTML += `<li>${ingredient}: ${proportion}</li>`;
+                            }
+                            resultsDiv.innerHTML += `</ul>`;
+                        });
+                    } else {
+                        resultsDiv.innerHTML += '<h3>No Recommended Formulations Found</h3>';
+                    }
+                }
+            } catch (error) {
+                document.getElementById('results').innerText = 'An error occurred. Please try again.';
+            }
+        }
+    </script>
+    
